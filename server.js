@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://your-flutter-app-domain.com']
+    ? ['https://nattygaslab-email-api.onrender.com', '*'] // Allow all origins for APK
     : ['http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true
 }));
@@ -66,7 +66,7 @@ const verifyEmailConfig = async () => {
 // Email templates
 const generateWelcomeEmailHtml = (userName, email, password, role) => {
   const baseUrl = process.env.NODE_ENV === 'production' 
-    ? process.env.BASE_URL || 'https://your-render-app-name.onrender.com'
+    ? process.env.BASE_URL || 'https://nattygaslab-email-api.onrender.com'
     : 'http://localhost:3001';
     
   return `

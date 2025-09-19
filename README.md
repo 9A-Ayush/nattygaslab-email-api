@@ -1,7 +1,7 @@
 
 # 📧 NattyGas Lab Email Service  
 
-Deployed on Render 👉 [NattyGasLab Email API](https://your-render-app-name.onrender.com)
+Deployed on Render 👉 [NattyGasLab Email API](https://nattygaslab-email-api.onrender.com)
 
 
 A secure, production-ready email microservice built with **Node.js**, **Express**, and **Nodemailer**.

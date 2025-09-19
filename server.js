@@ -335,6 +335,19 @@ const generateWelcomeEmailHtml = (userName, email, password, role) => {
 };
 
 // API Routes
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'NattyGas Lab Email Service API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      sendEmail: '/api/send-email (POST)'
+    }
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,

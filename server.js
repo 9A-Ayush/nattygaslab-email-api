@@ -3,6 +3,8 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -65,9 +67,17 @@ const verifyEmailConfig = async () => {
 
 // Email templates
 const generateWelcomeEmailHtml = (userName, email, password, role) => {
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? process.env.BASE_URL || 'https://nattygaslab-email-api.onrender.com'
-    : 'http://localhost:3001';
+  // Convert logo to base64 for better email compatibility
+  let logoBase64 = '';
+  try {
+    const logoPath = path.join(__dirname, 'public', 'images', 'logo.png');
+    if (fs.existsSync(logoPath)) {
+      const logoBuffer = fs.readFileSync(logoPath);
+      logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    }
+  } catch (error) {
+    console.warn('Could not load logo for email:', error.message);
+  }
     
   return `
     <!DOCTYPE html>
@@ -269,7 +279,7 @@ const generateWelcomeEmailHtml = (userName, email, password, role) => {
             <div class="container">
                 <div class="header">
                     <div class="logo">
-                        <img src="${baseUrl}/public/images/logo.png" alt="NattyGas Lab Logo" />
+                        ${logoBase64 ? `<img src="${logoBase64}" alt="NattyGas Lab Logo" />` : '<div style="font-size: 24px; font-weight: bold; color: #0072BC;">NGL</div>'}
                     </div>
                     <h1>Welcome to NattyGas Lab</h1>
                     <p>Laboratory Information Management System</p>
@@ -289,6 +299,7 @@ const generateWelcomeEmailHtml = (userName, email, password, role) => {
                         </div>
                         <div class="credential-item">
                             <span class="credential-label">🔐 Temporary Password:</span>
+                            <br>
                             <span class="password-code">${password}</span>
                         </div>
                         <div class="credential-item">

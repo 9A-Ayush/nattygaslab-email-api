@@ -32,6 +32,9 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files (for email images)
+app.use('/public', express.static('public'));
+
 // Create Nodemailer transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
@@ -62,6 +65,10 @@ const verifyEmailConfig = async () => {
 
 // Email templates
 const generateWelcomeEmailHtml = (userName, email, password, role) => {
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? process.env.BASE_URL || 'https://your-render-app-name.onrender.com'
+    : 'http://localhost:3001';
+    
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -70,57 +77,256 @@ const generateWelcomeEmailHtml = (userName, email, password, role) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Welcome to NattyGas Lab</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #0072BC, #005a9e); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-            .credentials { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0072BC; }
-            .security-notice { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .steps { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .footer { text-align: center; color: #666; font-size: 12px; margin-top: 30px; }
-            .emoji { font-size: 18px; }
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                line-height: 1.6; 
+                color: #333; 
+                margin: 0; 
+                padding: 0; 
+                background-color: #f4f4f4; 
+            }
+            .email-wrapper { 
+                background-color: #f4f4f4; 
+                padding: 20px; 
+                min-height: 100vh; 
+            }
+            .container { 
+                max-width: 600px; 
+                margin: 0 auto; 
+                background-color: white; 
+                border-radius: 12px; 
+                overflow: hidden; 
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); 
+            }
+            .header { 
+                background: linear-gradient(135deg, #0072BC, #005a9e); 
+                color: white; 
+                padding: 40px 30px; 
+                text-align: center; 
+                position: relative;
+            }
+            .logo { 
+                width: 80px; 
+                height: 80px; 
+                margin: 0 auto 20px; 
+                background: white; 
+                border-radius: 50%; 
+                padding: 10px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center;
+            }
+            .logo img { 
+                width: 60px; 
+                height: 60px; 
+                object-fit: contain; 
+            }
+            .header h1 { 
+                margin: 0; 
+                font-size: 28px; 
+                font-weight: 700; 
+            }
+            .header p { 
+                margin: 10px 0 0; 
+                font-size: 16px; 
+                opacity: 0.9; 
+            }
+            .content { 
+                padding: 40px 30px; 
+                background: #ffffff; 
+            }
+            .welcome-message { 
+                text-align: center; 
+                margin-bottom: 30px; 
+            }
+            .welcome-message h2 { 
+                color: #0072BC; 
+                font-size: 24px; 
+                margin: 0 0 10px; 
+            }
+            .credentials { 
+                background: linear-gradient(135deg, #f8f9ff, #e8f4fd); 
+                padding: 25px; 
+                border-radius: 12px; 
+                margin: 25px 0; 
+                border: 2px solid #e3f2fd; 
+                position: relative;
+            }
+            .credentials::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 4px;
+                background: #0072BC;
+                border-radius: 0 4px 4px 0;
+            }
+            .credentials h3 { 
+                color: #0072BC; 
+                margin: 0 0 15px; 
+                font-size: 18px; 
+            }
+            .credential-item { 
+                margin: 12px 0; 
+                padding: 8px 0; 
+            }
+            .credential-label { 
+                font-weight: 600; 
+                color: #555; 
+                display: inline-block; 
+                min-width: 120px; 
+            }
+            .credential-value { 
+                color: #333; 
+            }
+            .password-code { 
+                background: #f1f8ff; 
+                padding: 8px 12px; 
+                border-radius: 6px; 
+                font-family: 'Courier New', monospace; 
+                font-weight: bold; 
+                color: #0072BC; 
+                border: 1px solid #d1ecf1; 
+            }
+            .security-notice { 
+                background: linear-gradient(135deg, #fff8e1, #ffecb3); 
+                border: 2px solid #ffc107; 
+                padding: 20px; 
+                border-radius: 12px; 
+                margin: 25px 0; 
+                position: relative;
+            }
+            .security-notice::before {
+                content: '⚠️';
+                position: absolute;
+                top: -10px;
+                left: 20px;
+                background: #ffc107;
+                padding: 5px 10px;
+                border-radius: 20px;
+                font-size: 16px;
+            }
+            .security-notice h3 { 
+                color: #f57c00; 
+                margin: 0 0 10px; 
+                font-size: 16px; 
+            }
+            .security-notice p { 
+                margin: 0; 
+                font-weight: 600; 
+                color: #e65100; 
+            }
+            .steps { 
+                background: linear-gradient(135deg, #f1f8e9, #e8f5e8); 
+                padding: 25px; 
+                border-radius: 12px; 
+                margin: 25px 0; 
+                border: 2px solid #c8e6c9; 
+            }
+            .steps h3 { 
+                color: #2e7d32; 
+                margin: 0 0 15px; 
+                font-size: 18px; 
+            }
+            .steps ol { 
+                margin: 0; 
+                padding-left: 20px; 
+            }
+            .steps li { 
+                margin: 8px 0; 
+                color: #1b5e20; 
+            }
+            .contact-info { 
+                background: #f8f9fa; 
+                padding: 20px; 
+                border-radius: 8px; 
+                margin: 25px 0; 
+                text-align: center; 
+            }
+            .footer { 
+                background: #f8f9fa; 
+                text-align: center; 
+                color: #666; 
+                font-size: 12px; 
+                padding: 30px; 
+                border-top: 1px solid #e9ecef; 
+            }
+            .footer p { 
+                margin: 5px 0; 
+            }
+            .emoji { 
+                font-size: 18px; 
+                margin-right: 8px; 
+            }
+            .brand-colors { 
+                color: #0072BC; 
+            }
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="header">
-                <h1>🧪 Welcome to NattyGas Lab</h1>
-                <p>Laboratory Information Management System</p>
-            </div>
-            <div class="content">
-                <h2>Hello ${userName}! 👋</h2>
-                <p>Your account has been successfully created. Welcome to our laboratory management system!</p>
+        <div class="email-wrapper">
+            <div class="container">
+                <div class="header">
+                    <div class="logo">
+                        <img src="${baseUrl}/public/images/logo.png" alt="NattyGas Lab Logo" />
+                    </div>
+                    <h1>Welcome to NattyGas Lab</h1>
+                    <p>Laboratory Information Management System</p>
+                </div>
                 
-                <div class="credentials">
-                    <h3><span class="emoji">🔑</span> Your Login Credentials</h3>
-                    <p><strong>📧 Email:</strong> ${email}</p>
-                    <p><strong>🔐 Temporary Password:</strong> <code style="background: #f1f1f1; padding: 4px 8px; border-radius: 4px;">${password}</code></p>
-                    <p><strong>👤 Role:</strong> ${role.toUpperCase()}</p>
-                </div>
+                <div class="content">
+                    <div class="welcome-message">
+                        <h2>Hello ${userName}! 👋</h2>
+                        <p>Your account has been successfully created. Welcome to our advanced laboratory management system!</p>
+                    </div>
+                    
+                    <div class="credentials">
+                        <h3><span class="emoji">🔑</span> Your Login Credentials</h3>
+                        <div class="credential-item">
+                            <span class="credential-label">📧 Email:</span>
+                            <span class="credential-value">${email}</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="credential-label">🔐 Temporary Password:</span>
+                            <span class="password-code">${password}</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="credential-label">👤 Role:</span>
+                            <span class="credential-value brand-colors"><strong>${role.toUpperCase()}</strong></span>
+                        </div>
+                    </div>
 
-                <div class="security-notice">
-                    <h3><span class="emoji">⚠️</span> Important Security Notice</h3>
-                    <p><strong>For your security, please log in and change your password immediately after your first login.</strong></p>
-                </div>
+                    <div class="security-notice">
+                        <h3>Important Security Notice</h3>
+                        <p>For your security, please log in and change your password immediately after your first login.</p>
+                    </div>
 
-                <div class="steps">
-                    <h3><span class="emoji">🚀</span> Getting Started</h3>
-                    <ol>
-                        <li>Visit the NattyGas Lab application</li>
-                        <li>Log in using the credentials above</li>
-                        <li>Change your password in your profile settings</li>
-                        <li>Explore the features available for your role</li>
-                    </ol>
-                </div>
+                    <div class="steps">
+                        <h3><span class="emoji">🚀</span> Getting Started</h3>
+                        <ol>
+                            <li><strong>Visit</strong> the NattyGas Lab application</li>
+                            <li><strong>Log in</strong> using the credentials above</li>
+                            <li><strong>Change your password</strong> in your profile settings</li>
+                            <li><strong>Explore</strong> the features available for your role</li>
+                        </ol>
+                    </div>
 
-                <p>If you have any questions or need assistance, please contact your system administrator.</p>
+                    <div class="contact-info">
+                        <p><span class="emoji">📱</span> <strong>Need Help?</strong></p>
+                        <p>If you have any questions or need assistance, please contact your system administrator.</p>
+                    </div>
+                    
+                    <p style="text-align: center; margin-top: 30px;">
+                        Best regards,<br>
+                        <strong class="brand-colors">NattyGas Lab Team</strong>
+                    </p>
+                </div>
                 
-                <p>Best regards,<br>
-                <strong>NattyGas Lab Team</strong></p>
-            </div>
-            <div class="footer">
-                <p>This is an automated message. Please do not reply to this email.</p>
-                <p>&copy; ${new Date().getFullYear()} NattyGas Lab. All rights reserved.</p>
+                <div class="footer">
+                    <p>This is an automated message. Please do not reply to this email.</p>
+                    <p>&copy; ${new Date().getFullYear()} NattyGas Lab. All rights reserved.</p>
+                </div>
             </div>
         </div>
     </body>
